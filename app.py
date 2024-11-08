@@ -7,7 +7,7 @@ from matplotlib.collections import LineCollection
 def read_traj(time, day):
     path = os.path.join('./Data-mining', time, day)
 
-    percent = 0.4
+    percent = 1
     tdriveGPS = os.listdir(path)
     numfile = int(percent * len(tdriveGPS))
 
