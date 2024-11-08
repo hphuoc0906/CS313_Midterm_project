@@ -2,7 +2,6 @@ import streamlit as st
 from utils import *
 import os
 from numpy.random import default_rng
-import time
 from matplotlib.collections import LineCollection
 
 def read_traj(time, day):
@@ -64,6 +63,9 @@ def plot(rep, csegs):
 
     line_segments = LineCollection(csegs, colors='gray', linestyle='--')
     plt.gca().add_collection(line_segments)
+    points = np.array([[seg[0], seg[1]] for seg in csegs]).reshape(-1, 2)
+
+    plt.scatter(points[:, 0], points[:, 1], color='gray', edgecolors='black', marker='o')
 
     plt.plot(rep[:, 0], rep[:, 1], 'r', linewidth=3, marker='o', label="Representative Trajectory")
 
@@ -74,12 +76,20 @@ def plot(rep, csegs):
     plt.legend()
     st.pyplot(plt)
 
+
+
 def process(traj_data):
     preprocessed_data = preprocessing(traj_data)
-    segments = to_segments(preprocessed_data)
+
+    sto_traj = []
+    for traj in preprocessed_data:
+        cp = greedy_characteristic_points(traj)
+        sto_traj.append(cp)
+
+    segments = to_segments(sto_traj)
     
     vectors = None
-    for par in preprocessed_data:
+    for par in sto_traj:
         if(len(par) < 2): continue
         if(vectors is None):
             vectors = extract_feature_vector(par)
@@ -87,7 +97,7 @@ def process(traj_data):
             tmp = extract_feature_vector(par)
             vectors = np.concatenate((vectors, tmp), axis=0)
 
-    cls = line_segment_clustering(vectors, C=10**0, min_samples=5)
+    cls = line_segment_clustering(vectors, C=1, min_samples=5)
 
     for cluster_id in range(0, 5):
         ids = np.where(cls[0] == cluster_id)[0].tolist()
@@ -96,14 +106,10 @@ def process(traj_data):
     ids = np.where(cls[0] == 0)[0].tolist()
     csegs = [segments[i] for i in ids]
 
-    start = time.time()
     rep = get_representative_trajectory(csegs)
     rep = smooth_trajectory(rep, window_size=21)
-    print(time.time())
 
-    start = time.time()
     plot(rep, csegs)
-    print(time.time() - start)
 
 st.markdown("<h1 style='text-align: center;'>ĐỒ ÁN CS313</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align: center;'>BEIJING TDRIVER GPS 2008</h3>", unsafe_allow_html=True)
